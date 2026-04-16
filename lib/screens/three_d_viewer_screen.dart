@@ -3,10 +3,12 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 class ThreeDViewerScreen extends StatefulWidget {
   final String title;
+  final String modelUrl;
 
   const ThreeDViewerScreen({
     super.key,
     required this.title,
+    required this.modelUrl,
   });
 
   @override
@@ -15,9 +17,6 @@ class ThreeDViewerScreen extends StatefulWidget {
 
 class _ThreeDViewerScreenState extends State<ThreeDViewerScreen> {
   late final WebViewController _controller;
-
-  // YOUR GITHUB RAW URL
-  static const String _modelUrl = 'https://raw.githubusercontent.com/veerabathirannatrajan/fra_final/main/grill.glb';
 
   @override
   void initState() {
@@ -105,7 +104,7 @@ class _ThreeDViewerScreenState extends State<ThreeDViewerScreen> {
         
         <model-viewer 
             id="viewer"
-            src="$_modelUrl"
+            src="${widget.modelUrl}"
             alt="${widget.title}"
             auto-rotate
             camera-controls

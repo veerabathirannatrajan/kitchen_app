@@ -56,6 +56,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
             MaterialPageRoute(
               builder: (context) => const ThreeDViewerScreen(
                 title: 'FRIED RICE',
+                modelUrl: 'https://raw.githubusercontent.com/veerabathirannatrajan/kitchen_app/master/assets/threeD/friedrice.glb',
               ),
             ),
           );
