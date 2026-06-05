@@ -1,24 +1,6 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
-import 'screens/premium_splash_screen.dart';
+import 'app.dart';  // ← Changed from 'screens/premium_splash_screen.dart'
 
 void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'KitchX',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        fontFamily: 'SpaceMono',
-        scaffoldBackgroundColor: Colors.white,
-      ),
-      home: const PremiumSplashScreen(),
-    );
-  }
+  runApp(const KitchXApp());  // ← Changed from MyApp()
 }
