@@ -18,7 +18,7 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
   late AnimationController _floatController;
 
   late WebViewController _grillController;
-  late WebViewController _friedRiceController;
+  late WebViewController _chef2Controller;
 
   final List<Kitchen> _kitchens = [
     Kitchen(code: 'MK', name: 'Main Kitchen', color: const Color(0xFFFF6B35), imagePath: 'assets/kitchens/MK.jpg'),
@@ -31,7 +31,7 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
   ];
 
   static const String grillModelUrl = 'https://raw.githubusercontent.com/veerabathirannatrajan/kitchen_app/master/assets/threeD/grill.glb';
-  static const String friedRiceModelUrl = 'https://raw.githubusercontent.com/veerabathirannatrajan/kitchen_app/master/assets/threeD/friedrice.glb';
+  static const String chef2ModelUrl = 'https://raw.githubusercontent.com/veerabathirannatrajan/kitchen_app/master/assets/threeD/chef2.glb';
 
   @override
   void initState() {
@@ -55,11 +55,71 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
   }
 
   void _initWebViews() {
-    _grillController = _createWebViewController(grillModelUrl);
-    _friedRiceController = _createWebViewController(friedRiceModelUrl);
+    _grillController = _createGrillWebViewController();
+    _chef2Controller = _createChef2WebViewController();
   }
 
-  WebViewController _createWebViewController(String modelUrl) {
+  // Grill WebView - NO TOUCH GESTURES, AUTO-ROTATE ONLY
+  WebViewController _createGrillWebViewController() {
+    final String html = '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+                background: transparent !important;
+                overflow: hidden;
+                pointer-events: none;
+            }
+            model-viewer {
+                width: 100%;
+                height: 100vh;
+                background: transparent;
+                --poster-color: transparent;
+                pointer-events: none;
+            }
+        </style>
+        <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+    </head>
+    <body>
+        <model-viewer 
+            id="grill-viewer"
+            src="$grillModelUrl"
+            alt="Grill 3D Model"
+            auto-rotate
+            auto-rotate-delay="0"
+            rotation-per-second="30deg"
+            interaction-prompt="none"
+            camera-controls="false"
+            touch-action="none"
+            exposure="1.5"
+            shadow-intensity="0.8"
+            environment-image="neutral"
+            loading="eager"
+            style="background: transparent; pointer-events: none;">
+        </model-viewer>
+        <script>
+            const viewer = document.getElementById('grill-viewer');
+            viewer.addEventListener('load', () => {
+                viewer.cameraOrbit = '0deg 75deg 2.5m';
+            });
+            viewer.removeAttribute('camera-controls');
+        </script>
+    </body>
+    </html>
+    ''';
+
+    return WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Colors.transparent)
+      ..loadHtmlString(html);
+  }
+
+  // Chef2 WebView - WITH TOUCH GESTURES ENABLED
+  WebViewController _createChef2WebViewController() {
     final String html = '''
     <!DOCTYPE html>
     <html>
@@ -83,11 +143,12 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
     </head>
     <body>
         <model-viewer 
-            src="$modelUrl"
-            alt="3D Model"
+            src="$chef2ModelUrl"
+            alt="Chef 3D Model"
             auto-rotate
             camera-controls
             camera-orbit="0deg 75deg 2.5m"
+            interaction-prompt="auto"
             exposure="1.5"
             shadow-intensity="0.8"
             environment-image="neutral"
@@ -215,60 +276,46 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
   Widget _build3DBackgroundModels() {
     return Stack(
       children: [
-        // Grill model - Bottom Right Corner
+        // Chef2 model - Right side of "Available Kitchens" text
+        Positioned(
+          top: 2,
+          right: 17,
+          child: Container(
+            width: 170,
+            height: 170,
+
+            child: ClipRect(
+              child: WebViewWidget(controller: _chef2Controller),
+            ),
+          ),
+        ),
+
+        // Grill model - Bottom Right Corner (NO TOUCH, AUTO-ROTATE ONLY)
         AnimatedBuilder(
           animation: _floatController,
           builder: (context, child) {
             return Positioned(
-              bottom: 10,
-              right: 10,
+              bottom: 20,
+              right: 20,
               child: Transform.translate(
                 offset: Offset(0, _floatController.value * -8),
-                child: Container(
-                  width: 160,
-                  height: 160,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFFF6B35).withOpacity(0.15),
-                        blurRadius: 30,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: ClipOval(
-                    child: WebViewWidget(controller: _grillController),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-        // Fried Rice model - Top Left Corner
-        AnimatedBuilder(
-          animation: _floatController,
-          builder: (context, child) {
-            return Positioned(
-              top: 60,
-              left: 10,
-              child: Transform.translate(
-                offset: Offset(0, _floatController.value * 8),
-                child: Container(
-                  width: 140,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF4D9FFF).withOpacity(0.12),
-                        blurRadius: 30,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: ClipOval(
-                    child: WebViewWidget(controller: _friedRiceController),
+                child: IgnorePointer(
+                  child: Container(
+                    width: 170,
+                    height: 170,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFF6B35).withOpacity(0.10),
+                          blurRadius: 30,
+                          spreadRadius: 5,
+                        ),
+                      ],
+                    ),
+                    child: ClipRect(
+                      child: WebViewWidget(controller: _grillController),
+                    ),
                   ),
                 ),
               ),
@@ -315,7 +362,7 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
                   ),
                 ),
               ),
-              const Spacer(),
+              SizedBox(width: 10,),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
@@ -327,7 +374,7 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
                   children: [
                     Icon(
                       Icons.restaurant_menu_rounded,
-                      size: 16,
+                      size:16,
                       color: Color(0xFFFF6B35),
                     ),
                     SizedBox(width: 6),
@@ -347,23 +394,29 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
             ],
           ),
           const SizedBox(height: 20),
-          ShaderMask(
-            shaderCallback: (bounds) => const LinearGradient(
-              colors: [
-                Color(0xFFFF6B35),
-                Color(0xFFFF8C42),
-              ],
-            ).createShader(bounds),
-            child: const Text(
-              'Available Kitchens',
-              style: TextStyle(
-                fontFamily: 'SpaceMono',
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-                letterSpacing: 2,
+          Row(
+            children: [
+              Expanded(
+                child: ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [
+                      Color(0xFFFF6B35),
+                      Color(0xFFFF8C42),
+                    ],
+                  ).createShader(bounds),
+                  child: const Text(
+                    'Available Kitchens',
+                    style: TextStyle(
+                      fontFamily: 'SpaceMono',
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
           const SizedBox(height: 8),
           Text(
@@ -447,7 +500,7 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Kitchen Image - FIXED EQUAL SIZE FOR ALL
+                  // Kitchen Image
                   Expanded(
                     flex: 3,
                     child: Container(
@@ -522,7 +575,7 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
                           kitchen.name,
                           style: const TextStyle(
                             fontFamily: 'SpaceMono',
-                            fontSize: 22, // INCREASED FONT SIZE
+                            fontSize: 22,
                             fontWeight: FontWeight.w800,
                             color: Color(0xFF2D2D2D),
                             height: 1.2,

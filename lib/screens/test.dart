@@ -100,11 +100,8 @@ class _Button3DState extends State<Button3D>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// COMPLETION ANIMATOR  — clean 3-phase professional sequence
-//
-//  Phase A  0.00 → 0.40  Border sweeps green, soft glow breathes in
-//  Phase B  0.38 → 0.72  Card washes a translucent green sheen top→bottom
-//  Phase C  0.70 → 1.00  Card fades + slides up and collapses height to 0
+// COMPLETION ANIMATOR WIDGET
+// Wraps a single order card and drives the full celebration → exit sequence
 // ─────────────────────────────────────────────────────────────────────────────
 class _OrderCompletionAnimator extends StatefulWidget {
   final PendingOrder order;
@@ -128,64 +125,52 @@ class _OrderCompletionAnimatorState extends State<_OrderCompletionAnimator>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
 
-  // Phase A — glow breathe (ease in then ease out)
-  late Animation<double> _glowIn;
-
-  // Phase B — green wash sweeps downward (0 = top edge, 1 = fully washed)
-  late Animation<double> _wash;
-
-  // Phase C — exit
-  late Animation<double> _exitOpacity;
-  late Animation<double> _exitSlide;
-  late Animation<double> _exitHeight; // collapses the card's height
+  // Phase 1 (0.0 → 0.35): pulse / ripple glow on the card
+  // Phase 2 (0.35 → 0.65): particle burst + label
+  // Phase 3 (0.65 → 1.0 ): card shrinks & fades out upward
+  late Animation<double> _glowPulse;   // 0→1→0 in phase1
+  late Animation<double> _particles;   // 0→1 in phase2
+  late Animation<double> _exitScale;   // 1→0.75 in phase3
+  late Animation<double> _exitOpacity; // 1→0 in phase3
+  late Animation<double> _exitSlide;   // 0→-60 in phase3
 
   bool _triggered = false;
 
   @override
   void initState() {
     super.initState();
-
-    // Total: 2400 ms feels unhurried and premium
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2400),
+      duration: const Duration(milliseconds: 2200),
     );
 
-    // A: 0.00–0.42  soft glow breathes in then holds
-    _glowIn = Tween(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _ctrl,
-        curve: const Interval(0.00, 0.42, curve: Curves.easeInOut),
-      ),
-    );
+    _glowPulse = TweenSequence([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 50),
+    ]).animate(CurvedAnimation(
+      parent: _ctrl,
+      curve: const Interval(0.0, 0.38, curve: Curves.easeInOut),
+    ));
 
-    // B: 0.36–0.68  translucent wash sweeps top→bottom
-    _wash = Tween(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _ctrl,
-        curve: const Interval(0.36, 0.68, curve: Curves.easeInOut),
-      ),
-    );
+    _particles = Tween(begin: 0.0, end: 1.0).animate(CurvedAnimation(
+      parent: _ctrl,
+      curve: const Interval(0.30, 0.68, curve: Curves.easeOutCubic),
+    ));
 
-    // C: 0.68–1.00  exit — fade, slide up, collapse height
-    _exitOpacity = Tween(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(
-        parent: _ctrl,
-        curve: const Interval(0.68, 0.96, curve: Curves.easeInQuart),
-      ),
-    );
-    _exitSlide = Tween(begin: 0.0, end: -32.0).animate(
-      CurvedAnimation(
-        parent: _ctrl,
-        curve: const Interval(0.68, 1.00, curve: Curves.easeInCubic),
-      ),
-    );
-    _exitHeight = Tween(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(
-        parent: _ctrl,
-        curve: const Interval(0.82, 1.00, curve: Curves.easeInCubic),
-      ),
-    );
+    _exitScale = Tween(begin: 1.0, end: 0.78).animate(CurvedAnimation(
+      parent: _ctrl,
+      curve: const Interval(0.65, 1.0, curve: Curves.easeInCubic),
+    ));
+
+    _exitOpacity = Tween(begin: 1.0, end: 0.0).animate(CurvedAnimation(
+      parent: _ctrl,
+      curve: const Interval(0.65, 1.0, curve: Curves.easeInQuart),
+    ));
+
+    _exitSlide = Tween(begin: 0.0, end: -55.0).animate(CurvedAnimation(
+      parent: _ctrl,
+      curve: const Interval(0.65, 1.0, curve: Curves.easeInCubic),
+    ));
 
     _ctrl.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
@@ -199,13 +184,15 @@ class _OrderCompletionAnimatorState extends State<_OrderCompletionAnimator>
     super.didUpdateWidget(old);
     if (widget.isComplete && !old.isComplete && !_triggered) {
       _triggered = true;
-      Future.delayed(const Duration(milliseconds: 280), () {
+      // Small delay so the last item's own tick animation finishes first
+      Future.delayed(const Duration(milliseconds: 320), () {
         if (mounted) {
-          HapticFeedback.mediumImpact();
+          HapticFeedback.heavyImpact();
           _ctrl.forward(from: 0);
         }
       });
     }
+    // If an item is un-ticked while animating, reset
     if (!widget.isComplete && _triggered) {
       _triggered = false;
       _ctrl.stop();
@@ -224,62 +211,66 @@ class _OrderCompletionAnimatorState extends State<_OrderCompletionAnimator>
     return AnimatedBuilder(
       animation: _ctrl,
       builder: (context, child) {
-        final glow = _glowIn.value;
-        final wash = _wash.value;
+        final isAnimating = _ctrl.isAnimating || _ctrl.isCompleted;
 
-        return SizeTransition(
-          sizeFactor: _exitHeight,
-          axisAlignment: -1,
-          child: Transform.translate(
-            offset: Offset(0, _exitSlide.value),
+        // ── Phase 3: exit transform ─────────────────────────────────────
+        return Transform.translate(
+          offset: Offset(0, _exitSlide.value),
+          child: Transform.scale(
+            scale: _exitScale.value,
             child: Opacity(
               opacity: _exitOpacity.value,
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  // ── Base card ────────────────────────────────────────
-                  Container(
+                  // ── Card with glow border during phase 1 ──────────────
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 80),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
-                      // Soft green glow that breathes in during phase A
-                      boxShadow: glow > 0.01
+                      boxShadow: _glowPulse.value > 0.01
                           ? [
                         BoxShadow(
                           color: const Color(0xFF27AE60)
-                              .withOpacity(0.22 * glow),
-                          blurRadius: 22 * glow,
-                          spreadRadius: 2 * glow,
+                              .withOpacity(0.55 * _glowPulse.value),
+                          blurRadius: 28 * _glowPulse.value,
+                          spreadRadius: 4 * _glowPulse.value,
                         ),
                         BoxShadow(
-                          color: const Color(0xFF27AE60)
-                              .withOpacity(0.10 * glow),
-                          blurRadius: 44 * glow,
-                          spreadRadius: 4 * glow,
+                          color: const Color(0xFF2ECC71)
+                              .withOpacity(0.25 * _glowPulse.value),
+                          blurRadius: 50 * _glowPulse.value,
+                          spreadRadius: 6 * _glowPulse.value,
                         ),
                       ]
                           : [],
                     ),
-                    child: child,
+                    child: widget.child,
                   ),
 
-                  // ── Green wash overlay (phase B) ──────────────────────
-                  if (wash > 0.0)
+                  // ── Phase 2: particle burst overlay ───────────────────
+                  if (_particles.value > 0 && _particles.value < 1)
                     Positioned.fill(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: CustomPaint(
-                          painter: _WashPainter(progress: wash),
+                      child: IgnorePointer(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: CustomPaint(
+                            painter: _BurstParticlesPainter(
+                              progress: _particles.value,
+                              color: const Color(0xFF27AE60),
+                            ),
+                          ),
                         ),
                       ),
                     ),
 
-                  // ── Animated border (phase A→B) ───────────────────────
-                  if (glow > 0.01)
+                  // ── Ripple rings (phase 1) ─────────────────────────────
+                  if (_glowPulse.value > 0.01)
                     Positioned.fill(
                       child: IgnorePointer(
                         child: CustomPaint(
-                          painter: _BorderSweepPainter(
-                            progress: (glow * 1.6).clamp(0.0, 1.0),
+                          painter: _RippleRingPainter(
+                            progress: _glowPulse.value,
                             color: const Color(0xFF27AE60),
                           ),
                         ),
@@ -297,106 +288,129 @@ class _OrderCompletionAnimatorState extends State<_OrderCompletionAnimator>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// BORDER SWEEP PAINTER
-// Draws a green border that sweeps clockwise around the card
+// RIPPLE RING PAINTER  (phase 1 — expanding green rings on the card)
 // ─────────────────────────────────────────────────────────────────────────────
-class _BorderSweepPainter extends CustomPainter {
-  final double progress; // 0→1 sweeps the full perimeter
+class _RippleRingPainter extends CustomPainter {
+  final double progress; // 0→1→0
   final Color color;
 
-  const _BorderSweepPainter({required this.progress, required this.color});
+  const _RippleRingPainter({required this.progress, required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
-    const r = 20.0; // match card border radius
-    final rect = Rect.fromLTWH(1, 1, size.width - 2, size.height - 2);
-    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(r));
+    final center = Offset(size.width / 2, size.height / 2);
+    final maxR = math.sqrt(size.width * size.width + size.height * size.height) / 2;
 
-    // Full perimeter length (approx)
-    final perimeter = 2 * (size.width + size.height) - (8 - 2 * math.pi) * r;
+    for (int i = 0; i < 3; i++) {
+      final delay = i * 0.18;
+      final t = ((progress - delay) / (1.0 - delay)).clamp(0.0, 1.0);
+      if (t <= 0) continue;
 
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.8
-      ..strokeCap = StrokeCap.round;
+      final radius = maxR * t * 1.1;
+      final opacity = (1.0 - t) * 0.35 * progress;
 
-    // Trail: dim green behind the leading edge
-    paint.color = color.withOpacity(0.18);
-    canvas.drawRRect(rrect, paint);
+      final paint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5 - i * 0.5
+        ..color = color.withOpacity(opacity.clamp(0.0, 1.0));
 
-    // Leading arc: bright, sharp
-    final leadOpacity = (0.7 + 0.3 * math.sin(progress * math.pi))
-        .clamp(0.0, 1.0);
-    paint.color = color.withOpacity(leadOpacity);
-
-    // Use a path measure approach — draw only the swept portion
-    final path = Path()..addRRect(rrect);
-    // ignore: unused_local_variable
-    for (final metric in path.computeMetrics()) {
-      final len = metric.length * progress;
-      final extracted = metric.extractPath(0, len);
-      canvas.drawPath(extracted, paint);
-      break;
+      canvas.drawCircle(center, radius, paint);
     }
   }
 
   @override
-  bool shouldRepaint(_BorderSweepPainter old) => old.progress != progress;
+  bool shouldRepaint(_RippleRingPainter old) => old.progress != progress;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// WASH PAINTER
-// A translucent green gradient that sweeps top→bottom over the card
+// BURST PARTICLES PAINTER  (phase 2 — confetti-style explosion)
 // ─────────────────────────────────────────────────────────────────────────────
-class _WashPainter extends CustomPainter {
+class _BurstParticlesPainter extends CustomPainter {
   final double progress; // 0→1
+  final Color color;
 
-  const _WashPainter({required this.progress});
+  const _BurstParticlesPainter({required this.progress, required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
-    // The wash front edge moves from top to bottom
-    final frontY = size.height * progress;
+    final rng = math.Random(77);
+    final center = Offset(size.width / 2, size.height / 2);
+    final paint = Paint()..style = PaintingStyle.fill;
 
-    // Behind the front: a soft translucent green
-    final washRect = Rect.fromLTWH(0, 0, size.width, frontY);
-    final washPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          const Color(0xFF27AE60).withOpacity(0.10),
-          const Color(0xFF27AE60).withOpacity(0.06),
-        ],
-      ).createShader(washRect);
+    const particleCount = 64;
 
-    canvas.drawRect(washRect, washPaint);
+    for (int i = 0; i < particleCount; i++) {
+      final angle = (i / particleCount) * 2 * math.pi + rng.nextDouble() * 0.4;
+      final speed = 0.35 + rng.nextDouble() * 0.65;
+      final maxDist = (size.width * 0.55) * speed;
 
-    // Leading edge: a soft bright line
-    if (progress > 0.01 && progress < 0.99) {
-      final linePaint = Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [
-            Colors.transparent,
-            const Color(0xFF2ECC71).withOpacity(0.55),
-            const Color(0xFF2ECC71).withOpacity(0.55),
-            Colors.transparent,
-          ],
-          stops: const [0.0, 0.15, 0.85, 1.0],
-        ).createShader(Rect.fromLTWH(0, frontY - 1.5, size.width, 3))
-        ..style = PaintingStyle.fill;
+      // Ease out distance — fast start, slow end
+      final dist = maxDist * (1 - math.pow(1 - progress, 2.5));
 
-      canvas.drawRect(
-        Rect.fromLTWH(0, frontY - 1.5, size.width, 3),
-        linePaint,
-      );
+      final x = center.dx + math.cos(angle) * dist;
+      // Slight vertical bias downward (gravity feel)
+      final y = center.dy + math.sin(angle) * dist * 0.75 + progress * 12 * speed;
+
+      final baseR = 1.8 + rng.nextDouble() * 3.2;
+      final radius = baseR * (1 - progress * 0.65);
+
+      // Opacity: fast appear, slower fade
+      final opacity = (math.sin(progress * math.pi) *
+          (0.5 + rng.nextDouble() * 0.5))
+          .clamp(0.0, 1.0);
+
+      // Color variety: mix green shades + white sparkles
+      final colorChoice = rng.nextInt(4);
+      Color pColor;
+      switch (colorChoice) {
+        case 0:
+          pColor = const Color(0xFF27AE60);
+          break;
+        case 1:
+          pColor = const Color(0xFF2ECC71);
+          break;
+        case 2:
+          pColor = const Color(0xFF52D68A);
+          break;
+        default:
+          pColor = Colors.white;
+      }
+
+      // Glow on larger particles
+      if (baseR > 4.0) {
+        final glowPaint = Paint()
+          ..style = PaintingStyle.fill
+          ..color = pColor.withOpacity(opacity * 0.25)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+        canvas.drawCircle(Offset(x, y), radius * 2.2, glowPaint);
+      }
+
+      paint.color = pColor.withOpacity(opacity);
+      canvas.drawCircle(Offset(x, y), radius.clamp(0.5, 10.0), paint);
+    }
+
+    // Central flash (only in early progress)
+    if (progress < 0.25) {
+      final flashT = progress / 0.25;
+      final flashPaint = Paint()
+        ..style = PaintingStyle.fill
+        ..color = Colors.white.withOpacity((1 - flashT) * 0.85);
+      canvas.drawCircle(center, 22 * (1 - flashT) + 4, flashPaint);
+    }
+
+    // Energy ring expanding outward
+    if (progress < 0.45) {
+      final ringT = progress / 0.45;
+      final ringPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5 * (1 - ringT)
+        ..color = const Color(0xFF2ECC71).withOpacity((1 - ringT) * 0.7);
+      canvas.drawCircle(center, 15 + 50 * ringT, ringPaint);
     }
   }
 
   @override
-  bool shouldRepaint(_WashPainter old) => old.progress != progress;
+  bool shouldRepaint(_BurstParticlesPainter old) => old.progress != progress;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -488,7 +502,9 @@ class _KitchenOrdersScreenState extends State<KitchenOrdersScreen>
   }
 
   void _removeOrder(PendingOrder order) {
-    if (mounted) setState(() => _orders.remove(order));
+    if (mounted) {
+      setState(() => _orders.remove(order));
+    }
   }
 
   String _formatTime(DateTime dateTime) =>
@@ -648,8 +664,7 @@ class _KitchenOrdersScreenState extends State<KitchenOrdersScreen>
           ),
           const SizedBox(width: 8),
           Container(
-            padding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -940,11 +955,12 @@ class _KitchenOrdersScreenState extends State<KitchenOrdersScreen>
           Expanded(flex: 5, child: _ColumnHeader('ITEM / REMARKS')),
           SizedBox(
               width: 44,
-              child: Center(child: _ColumnHeader('QTY', centered: true))),
+              child: Center(
+                  child: _ColumnHeader('QTY', centered: true))),
           SizedBox(
               width: 72,
-              child:
-              Center(child: _ColumnHeader('STATUS', centered: true))),
+              child: Center(
+                  child: _ColumnHeader('STATUS', centered: true))),
         ],
       ),
     );
@@ -1079,8 +1095,7 @@ class _KitchenOrdersScreenState extends State<KitchenOrdersScreen>
                     boxShadow: isReady
                         ? [
                       BoxShadow(
-                        color:
-                        const Color(0xFF27AE60).withOpacity(0.3),
+                        color: const Color(0xFF27AE60).withOpacity(0.3),
                         blurRadius: 10,
                         spreadRadius: 1,
                         offset: const Offset(0, 3),
@@ -1098,7 +1113,8 @@ class _KitchenOrdersScreenState extends State<KitchenOrdersScreen>
                     duration: const Duration(milliseconds: 200),
                     transitionBuilder: (child, anim) => ScaleTransition(
                       scale: anim,
-                      child: FadeTransition(opacity: anim, child: child),
+                      child:
+                      FadeTransition(opacity: anim, child: child),
                     ),
                     child: isReady
                         ? const Icon(Icons.check_rounded,
