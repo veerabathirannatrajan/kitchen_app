@@ -27,6 +27,23 @@ class ApiService {
     }
   }
 
+  /// Fetch all active kitchens from API
+  Future<List<Map<String, dynamic>>> getKitchens() async {
+    try {
+      final response = await http.get(
+        Uri.parse(ApiConfig.kitchenMst),
+      ).timeout(ApiConfig.connectionTimeout);
+
+      if (response.statusCode == 200 && response.body.isNotEmpty) {
+        return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching kitchens: $e');
+      return [];
+    }
+  }
+
   Future<bool> setItemReady({
     required String outletCode,
     required int kotNo,

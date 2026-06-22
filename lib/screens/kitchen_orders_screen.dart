@@ -8,6 +8,7 @@ import '../models/pending_order.dart';
 import '../models/order_item.dart';
 import '../services/api_service.dart';
 import '../widgets/button_3d.dart';
+import '../config/responsive.dart';
 import '../widgets/order_completion_animator.dart';
 import '../data/mock_orders.dart' as mock;
 
@@ -167,12 +168,36 @@ class _KitchenOrdersScreenState extends State<KitchenOrdersScreen> with TickerPr
 
   Widget _buildOrdersList() {
     if (_orders.isEmpty) {
-      return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Container(padding: const EdgeInsets.all(40), decoration: BoxDecoration(gradient: LinearGradient(colors: [widget.kitchenColor.withOpacity(0.15), widget.kitchenColor.withOpacity(0.05)]), shape: BoxShape.circle), child: Icon(Icons.check_circle_outline_rounded, size: 70, color: widget.kitchenColor)), const SizedBox(height: 28), Text('All Orders Completed!', style: TextStyle(fontFamily: 'SpaceMono', fontSize: 23, fontWeight: FontWeight.w700, color: widget.kitchenColor)), const SizedBox(height: 10), const Text('Waiting for new orders...', style: TextStyle(fontFamily: 'SpaceMono', fontSize: 15, color: Color(0xFF999999)))]));
+      return RefreshIndicator(
+        color: widget.kitchenColor,
+        onRefresh: _loadOrders,
+        child: ListView(
+          children: [
+            SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+            Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Container(padding: const EdgeInsets.all(40), decoration: BoxDecoration(gradient: LinearGradient(colors: [widget.kitchenColor.withValues(alpha: 0.15), widget.kitchenColor.withValues(alpha: 0.05)]), shape: BoxShape.circle), child: Icon(Icons.check_circle_outline_rounded, size: 70, color: widget.kitchenColor)),
+              const SizedBox(height: 28),
+              Text('All Orders Completed!', style: TextStyle(fontFamily: 'SpaceMono', fontSize: Responsive.fontSize(context, 23), fontWeight: FontWeight.w700, color: widget.kitchenColor)),
+              const SizedBox(height: 10),
+              const Text('Pull down to refresh', style: TextStyle(fontFamily: 'SpaceMono', fontSize: 15, color: Color(0xFF999999))),
+            ])),
+          ],
+        ),
+      );
     }
-    return ListView.builder(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), itemCount: _orders.length, itemBuilder: (context, index) {
-      final order = _orders[index];
-      return OrderCompletionAnimator(order: order, isComplete: order.isAllComplete, onDismissed: () => _removeOrder(order), child: _buildOrderCard(order));
-    });
+
+    return RefreshIndicator(
+      color: widget.kitchenColor,
+      onRefresh: _loadOrders,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        itemCount: _orders.length,
+        itemBuilder: (context, index) {
+          final order = _orders[index];
+          return OrderCompletionAnimator(order: order, isComplete: order.isAllComplete, onDismissed: () => _removeOrder(order), child: _buildOrderCard(order));
+        },
+      ),
+    );
   }
 
   Widget _buildOrderCard(PendingOrder order) {
