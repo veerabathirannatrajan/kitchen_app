@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
+import '../config/kds_config.dart';
 import '../models/pending_order.dart';
 
 class ApiService {
@@ -27,19 +28,30 @@ class ApiService {
     }
   }
 
-  /// Fetch all active kitchens from API
   Future<List<Map<String, dynamic>>> getKitchens() async {
     try {
+      // Use GET - same as Postman
       final response = await http.get(
         Uri.parse(ApiConfig.kitchenMst),
-      ).timeout(ApiConfig.connectionTimeout);
+        headers: {'Accept': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+
+      print('Kitchen Status: ${response.statusCode}');
+      print('Kitchen Body: ${response.body}');
 
       if (response.statusCode == 200 && response.body.isNotEmpty) {
-        return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+        final List<dynamic> data = jsonDecode(response.body);
+        print('Parsed ${data.length} kitchens');
+        return data.map((item) {
+          return {
+            'KitchenCode': item['KitchenCode']?.toString() ?? '',
+            'KitchenDesc': item['KitchenDesc']?.toString()?.trim() ?? '',
+          };
+        }).toList();
       }
       return [];
     } catch (e) {
-      print('Error fetching kitchens: $e');
+      print('😒😒😒😒😒😒😒😒😒😒😒😒😒😒😒😒😒😒😒😒Error fetching kitchens: $e');
       return [];
     }
   }
@@ -64,8 +76,8 @@ class ApiService {
           'ItemReadyFlg': 'I',
           'ItemReadyBy': readyBy,
           'KitchenCode': kitchenCode,
-          'BrnCode': '001',
-          'CompCode': '001',
+          'BrnCode': KDSConfig.brnCode,
+          'CompCode': KDSConfig.compCode,
         }),
       ).timeout(ApiConfig.connectionTimeout);
 

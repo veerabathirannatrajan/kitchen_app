@@ -144,7 +144,7 @@ class _PremiumSplashScreenState extends State<PremiumSplashScreen>
                         const Spacer(flex: 1),
                         _buildGetStartedButton(),
                         const SizedBox(height: 32),
-                        _buildBottomIndicator(),
+
                         const SizedBox(height: 20),
                       ],
                     ),
@@ -225,38 +225,6 @@ class _PremiumSplashScreenState extends State<PremiumSplashScreen>
     ];
   }
 
-  Widget _buildChefSection() {
-    return AnimatedBuilder(
-      animation: _floatController,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(0, _floatController.value * -10),
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFFF6B35).withOpacity(0.2),
-                  blurRadius: 40,
-                  spreadRadius: 10,
-                ),
-                BoxShadow(
-                  color: const Color(0xFFFF8C42).withOpacity(0.1),
-                  blurRadius: 60,
-                  spreadRadius: 15,
-                ),
-              ],
-            ),
-            child: const Chef3DViewer(
-              size: 320,
-              autoRotate: true,
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   Widget _buildTitleSection() {
     return Column(
       children: [
@@ -296,7 +264,7 @@ class _PremiumSplashScreenState extends State<PremiumSplashScreen>
             ],
           ),
           child: const Text(
-            'KITCHEN COMMAND CENTER',
+            'KITCHEN DISPLAY SYSTEM',
             style: TextStyle(
               fontFamily: 'SpaceMono',
               fontSize: 11,
@@ -307,6 +275,38 @@ class _PremiumSplashScreenState extends State<PremiumSplashScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildChefSection() {
+    return AnimatedBuilder(
+      animation: _floatController,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _floatController.value * -10),
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFF6B35).withOpacity(0.2),
+                  blurRadius: 40,
+                  spreadRadius: 10,
+                ),
+                BoxShadow(
+                  color: const Color(0xFFFF8C42).withOpacity(0.1),
+                  blurRadius: 60,
+                  spreadRadius: 15,
+                ),
+              ],
+            ),
+            child: const Chef3DViewer(
+              size: 330,
+              autoRotate: true,
+            ),
+          ),
+        );
+      },
     );
   }
 

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'dart:ui';
-import 'package:webview_flutter/webview_flutter.dart';
 import '../config/app_colors.dart';
 import '../config/responsive.dart';
 import '../services/api_service.dart';
+import 'connection_status_screen.dart';
 import 'kitchen_orders_screen.dart';
 
 class KitchenSelectionScreen extends StatefulWidget {
@@ -19,18 +20,12 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
   late AnimationController _fadeController;
   late AnimationController _floatController;
 
-  late WebViewController _grillController;
-  late WebViewController _chef2Controller;
-
   final ApiService _apiService = ApiService();
   List<Map<String, dynamic>> _kitchens = [];
   bool _isLoading = true;
   String? _errorMessage;
   final ScrollController _scrollController = ScrollController();
   bool _showHeader = true;
-
-  static const String grillModelUrl = 'https://raw.githubusercontent.com/veerabathirannatrajan/kitchen_app/master/assets/threeD/grill.glb';
-  static const String chef2ModelUrl = 'https://raw.githubusercontent.com/veerabathirannatrajan/kitchen_app/master/assets/threeD/chef2.glb';
 
   @override
   void initState() {
@@ -39,7 +34,6 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
     _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))..forward();
     _floatController = AnimationController(vsync: this, duration: const Duration(milliseconds: 4000))..repeat(reverse: true);
     _scrollController.addListener(_onScroll);
-    _initWebViews();
     _loadKitchens();
   }
 
@@ -49,25 +43,6 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
     } else if (_scrollController.position.pixels <= 120 && !_showHeader) {
       setState(() => _showHeader = true);
     }
-  }
-
-  void _initWebViews() {
-    _grillController = _createGrillWebViewController();
-    _chef2Controller = _createChef2WebViewController();
-  }
-
-  WebViewController _createGrillWebViewController() {
-    return WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.transparent)
-      ..loadHtmlString('''<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><style>*{margin:0;padding:0}body{background:transparent!important;overflow:hidden;pointer-events:none}model-viewer{width:100%;height:100vh;background:transparent;--poster-color:transparent;pointer-events:none}</style><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script></head><body><model-viewer id="g" src="$grillModelUrl" alt="Grill" auto-rotate auto-rotate-delay="0" rotation-per-second="30deg" interaction-prompt="none" camera-controls="false" touch-action="none" exposure="1.5" shadow-intensity="0.8" environment-image="neutral" loading="eager" style="background:transparent;pointer-events:none"></model-viewer><script>document.getElementById('g').addEventListener('load',function(){this.cameraOrbit='0deg 75deg 2.5m'});</script></body></html>''');
-  }
-
-  WebViewController _createChef2WebViewController() {
-    return WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.transparent)
-      ..loadHtmlString('''<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><style>*{margin:0;padding:0}body{background:transparent!important;overflow:hidden}model-viewer{width:100%;height:100vh;background:transparent;--poster-color:transparent}</style><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script></head><body><model-viewer src="$chef2ModelUrl" alt="Chef" auto-rotate camera-controls camera-orbit="0deg 75deg 2.5m" interaction-prompt="auto" exposure="1.5" shadow-intensity="0.8" environment-image="neutral" loading="eager" style="background:transparent"></model-viewer></body></html>''');
   }
 
   Future<void> _loadKitchens() async {
@@ -86,6 +61,11 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
     } catch (e) {
       if (mounted) setState(() { _errorMessage = 'Failed to load kitchens. Check your connection.'; _isLoading = false; });
     }
+  }
+
+  Future<void> _onRefresh() async {
+    setState(() { _isLoading = true; _errorMessage = null; });
+    await _loadKitchens();
   }
 
   bool _kitchenHasOrders(String code) {
@@ -118,13 +98,11 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
                 _buildBackground(),
                 _build3DModels(),
                 FadeTransition(opacity: CurvedAnimation(parent: _fadeController, curve: Curves.easeOut), child: Column(children: [
-                  // Collapsible header
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     height: _showHeader ? null : 0,
                     child: _showHeader ? _buildHeader() : const SizedBox.shrink(),
                   ),
-                  // Compact bar when scrolled
                   if (!_showHeader)
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: Responsive.fontSize(context, 20), vertical: Responsive.fontSize(context, 8)),
@@ -133,6 +111,8 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
                         GestureDetector(onTap: () => Navigator.pop(context), child: Icon(Icons.arrow_back_ios_new_rounded, size: Responsive.fontSize(context, 18), color: AppColors.primaryOrange)),
                         SizedBox(width: Responsive.fontSize(context, 12)),
                         Text('${_kitchens.length} Kitchens', style: TextStyle(fontFamily: 'SpaceMono', fontSize: Responsive.fontSize(context, 16), fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                        const Spacer(),
+                        GestureDetector(onTap: _onRefresh, child: Icon(Icons.refresh_rounded, size: Responsive.fontSize(context, 20), color: AppColors.primaryOrange)),
                       ]),
                     ),
                   Expanded(child: _buildBody()),
@@ -154,8 +134,66 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
 
   Widget _build3DModels() {
     return Stack(children: [
-      Positioned(top: 2, right: 17, child: SizedBox(width: 135, height: 135, child: ClipRect(child: WebViewWidget(controller: _chef2Controller)))),
-      AnimatedBuilder(animation: _floatController, builder: (_, __) => Positioned(bottom: 20, right: 20, child: Transform.translate(offset: Offset(0, _floatController.value * -8), child: IgnorePointer(child: Container(width: 170, height: 170, decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [BoxShadow(color: AppColors.primaryOrange.withValues(alpha: 0.10), blurRadius: 30, spreadRadius: 5)]), child: ClipRect(child: WebViewWidget(controller: _grillController))))))),
+      // Chef2 - Top Right (User can rotate)
+      Positioned(
+        top: 4, right: 17,
+        child: SizedBox(
+          width: 170, height: 170,
+          child: ModelViewer(
+            src: 'assets/threeD/chef2.glb',
+            alt: "Chef 3D Model",
+            autoPlay: true,
+            autoRotate: false,
+            cameraControls: true,
+            disableZoom: true,
+            disableTap: true,
+            backgroundColor: Colors.transparent,
+            ar: false,
+            arModes: [],
+            iosSrc: '',
+            exposure: 1.5,
+            shadowIntensity: 1.0,
+            environmentImage: '',
+          ),
+        ),
+      ),
+      // Grill - Bottom Right (Auto-rotate only)
+      AnimatedBuilder(
+        animation: _floatController,
+        builder: (_, __) => Positioned(
+          bottom: 20, right: 20,
+          child: Transform.translate(
+            offset: Offset(0, _floatController.value * -8),
+            child: IgnorePointer(
+              child: Container(
+                width: 170, height: 170,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [BoxShadow(color: AppColors.primaryOrange.withValues(alpha: 0.10), blurRadius: 30, spreadRadius: 5)],
+                ),
+                child: ClipOval(
+                  child: ModelViewer(
+                    src: 'assets/threeD/grill.glb',
+                    alt: "Grill 3D Model",
+                    autoPlay: true,
+                    autoRotate: true,
+                    cameraControls: false,
+                    disableZoom: true,
+                    disableTap: true,
+                    backgroundColor: Colors.transparent,
+                    ar: false,
+                    arModes: [],
+                    iosSrc: '',
+                    exposure: 1.5,
+                    shadowIntensity: 0.8,
+                    environmentImage: '',
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     ]);
   }
 
@@ -167,6 +205,42 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
           Container(decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.8), borderRadius: BorderRadius.circular(Responsive.fontSize(context, 15)), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 2))]), child: Material(color: Colors.transparent, child: InkWell(borderRadius: BorderRadius.circular(Responsive.fontSize(context, 15)), onTap: () => Navigator.pop(context), child: Container(padding: EdgeInsets.all(Responsive.fontSize(context, 10)), child: Icon(Icons.arrow_back_ios_new_rounded, size: Responsive.fontSize(context, 18), color: const Color(0xFF666666)))))),
           SizedBox(width: Responsive.fontSize(context, 10)),
           Container(padding: EdgeInsets.symmetric(horizontal: Responsive.fontSize(context, 14), vertical: Responsive.fontSize(context, 6)), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(Responsive.fontSize(context, 30))), child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.restaurant_menu_rounded, size: Responsive.fontSize(context, 14), color: AppColors.primaryOrange), SizedBox(width: Responsive.fontSize(context, 6)), Text('SELECT KITCHEN', style: TextStyle(fontFamily: 'SpaceMono', fontSize: Responsive.fontSize(context, 10), fontWeight: FontWeight.w600, color: const Color(0xFF666666), letterSpacing: 2))])),
+          const Spacer(),
+// Settings Gear Icon
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ConnectionStatusScreen()),
+              );
+            },
+            child: Container(
+              padding: EdgeInsets.all(Responsive.fontSize(context, 10)),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.8),
+                borderRadius: BorderRadius.circular(Responsive.fontSize(context, 12)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Icon(Icons.settings_rounded, size: Responsive.fontSize(context, 18), color: const Color(0xFF666666)),
+            ),
+          ),
+          const Spacer(),
+
+          // Refresh button in header
+          GestureDetector(
+            onTap: _onRefresh,
+            child: Container(
+              padding: EdgeInsets.all(Responsive.fontSize(context, 10)),
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.8), borderRadius: BorderRadius.circular(Responsive.fontSize(context, 12)), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))]),
+              child: Icon(Icons.refresh_rounded, size: Responsive.fontSize(context, 18), color: AppColors.primaryOrange),
+            ),
+          ),
         ]),
         SizedBox(height: Responsive.fontSize(context, 16)),
         ShaderMask(shaderCallback: (bounds) => const LinearGradient(colors: [AppColors.primaryOrange, Color(0xFFFF8C42)]).createShader(bounds), child: Text('Available Kitchens', style: TextStyle(fontFamily: 'SpaceMono', fontSize: Responsive.fontSize(context, 26), fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 2))),
@@ -196,7 +270,11 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
 
     if (_kitchens.isEmpty) return Center(child: Text('No kitchens available', style: TextStyle(fontFamily: 'SpaceMono', fontSize: Responsive.fontSize(context, 16), color: AppColors.textLight)));
 
-    return _buildKitchenGrid();
+    return RefreshIndicator(
+      color: AppColors.primaryOrange,
+      onRefresh: _onRefresh,
+      child: _buildKitchenGrid(),
+    );
   }
 
   Widget _buildKitchenGrid() {
