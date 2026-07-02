@@ -4,13 +4,13 @@ class KDSConfig {
   // ===================================================
 
   // Server Settings
-  static const String serverIP = '192.168.1.10';     // Local KDS Server IP
-  static const int serverPort = 8082;                 // API Port
+  static const String serverIP = '192.168.0.80';     // Local KDS Server IP
+  static const int serverPort = 9176;                 // API Port
 
   // Database Settings (for future direct DB connection)
-  static const String dbServerIP = '192.168.1.20';   // Database Server IP
-  static const int dbPort = 1433;                    // SQL Server Port
-  static const String dbName = 'MAXIM';
+  static const String dbServerIP = '192.168.0.80';   // Database Server IP
+  static const int dbPort = 9176;                    // SQL Server Port
+  static const String dbName = 'MAXIM_cosmo';
   static const String dbUser = 'kds_user';
   static const String dbPassword = 'kds_pass_123';
 
