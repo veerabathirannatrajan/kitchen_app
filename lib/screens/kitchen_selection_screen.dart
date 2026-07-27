@@ -76,7 +76,7 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
+      onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
           final now = DateTime.now();
           if (_lastBackPress == null || now.difference(_lastBackPress!) > const Duration(seconds: 2)) {
@@ -90,9 +90,9 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ));
             }
-            return;
+          } else {
+            if (context.mounted) SystemNavigator.pop();
           }
-          if (context.mounted) SystemNavigator.pop();
         }
       },
       child: Scaffold(
@@ -135,10 +135,8 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
       padding: EdgeInsets.fromLTRB(Responsive.fontSize(context, 20), Responsive.fontSize(context, 12), Responsive.fontSize(context, 20), Responsive.fontSize(context, 12)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Container(decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.8), borderRadius: BorderRadius.circular(Responsive.fontSize(context, 15)), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 2))]), child: Material(color: Colors.transparent, child: InkWell(borderRadius: BorderRadius.circular(Responsive.fontSize(context, 15)), onTap: () => Navigator.pop(context), child: Container(padding: EdgeInsets.all(Responsive.fontSize(context, 10)), child: Icon(Icons.arrow_back_ios_new_rounded, size: Responsive.fontSize(context, 18), color: const Color(0xFF666666)))))),
-          SizedBox(width: Responsive.fontSize(context, 10)),
           Container(padding: EdgeInsets.symmetric(horizontal: Responsive.fontSize(context, 14), vertical: Responsive.fontSize(context, 6)), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(Responsive.fontSize(context, 30))), child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.restaurant_menu_rounded, size: Responsive.fontSize(context, 14), color: AppColors.primaryOrange), SizedBox(width: Responsive.fontSize(context, 6)), Text('SELECT KITCHEN', style: TextStyle(fontFamily: 'SpaceMono', fontSize: Responsive.fontSize(context, 10), fontWeight: FontWeight.w600, color: const Color(0xFF666666), letterSpacing: 2))])),
-          SizedBox(width: Responsive.fontSize(context, 8)),
+          const Spacer(),
           GestureDetector(onTap: _onRefresh, child: Container(padding: EdgeInsets.all(Responsive.fontSize(context, 10)), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.8), borderRadius: BorderRadius.circular(Responsive.fontSize(context, 12)), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))]), child: Icon(Icons.refresh_rounded, size: Responsive.fontSize(context, 18), color: AppColors.primaryOrange))),
         ]),
         SizedBox(height: Responsive.fontSize(context, 16)),

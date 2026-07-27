@@ -189,12 +189,34 @@ class _KitchenOrdersScreenState extends State<KitchenOrdersScreen> with TickerPr
 
   Widget _buildItemRow(PendingOrder o, OrderItem item, int idx) {
     final ready = item.status == ItemStatus.ready;
-    return AnimatedContainer(duration: const Duration(milliseconds: 280), curve: Curves.easeOutCubic, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), decoration: BoxDecoration(color: ready ? AppColors.statusReady.withValues(alpha: 0.05) : (idx % 2 == 0 ? Colors.white.withValues(alpha: 0.4) : Colors.transparent), border: const Border(bottom: BorderSide(color: Color(0xFFEEEEEE), width: 1))), child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-      Expanded(flex: 5, child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [AnimatedContainer(duration: const Duration(milliseconds: 280), width: 3, height: 28, margin: const EdgeInsets.only(right: 8), decoration: BoxDecoration(borderRadius: BorderRadius.circular(4), color: ready ? AppColors.statusReady.withValues(alpha: 0.5) : widget.kitchenColor.withValues(alpha: 0.4))), Flexible(child: Text(item.itemName, style: TextStyle(fontFamily: 'SpaceMono', fontSize: 13, fontWeight: FontWeight.w700, color: ready ? const Color(0xFFAAAAAA) : AppColors.textDark, decoration: ready ? TextDecoration.lineThrough : null), maxLines: 2, overflow: TextOverflow.ellipsis))])),
-      SizedBox(width: 40, child: Center(child: Text('${item.qty}', style: TextStyle(fontFamily: 'SpaceMono', fontSize: 15, fontWeight: FontWeight.w700, color: ready ? const Color(0xFFAAAAAA) : AppColors.textDark)))),
-      SizedBox(width: 60, child: Center(child: GestureDetector(onTap: () => _toggleItemStatus(o, item), child: AnimatedContainer(duration: const Duration(milliseconds: 250), padding: const EdgeInsets.all(8), decoration: BoxDecoration(shape: BoxShape.circle, color: ready ? AppColors.statusReady : widget.kitchenColor.withValues(alpha: 0.1)), child: Icon(ready ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, size: 20, color: ready ? Colors.white : widget.kitchenColor.withValues(alpha: 0.5)))))),
-      SizedBox(width: 44, child: Center(child: GestureDetector(onTap: () => _showCancelDialog(o, item), child: Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: AppColors.statusPending.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.statusPending.withValues(alpha: 0.3))), child: const Icon(Icons.close_rounded, size: 16, color: AppColors.statusPending))))),
-    ]));
+    final orderComplete = o.isAllComplete;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 280), curve: Curves.easeOutCubic,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: ready ? AppColors.statusReady.withValues(alpha: 0.05) : (idx % 2 == 0 ? Colors.white.withValues(alpha: 0.4) : Colors.transparent),
+        border: const Border(bottom: BorderSide(color: Color(0xFFEEEEEE), width: 1)),
+      ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        Expanded(flex: 5, child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          AnimatedContainer(duration: const Duration(milliseconds: 280), width: 3, height: 28, margin: const EdgeInsets.only(right: 8), decoration: BoxDecoration(borderRadius: BorderRadius.circular(4), color: ready ? AppColors.statusReady.withValues(alpha: 0.5) : widget.kitchenColor.withValues(alpha: 0.4))),
+          Flexible(child: Text(item.itemName, style: TextStyle(fontFamily: 'SpaceMono', fontSize: 13, fontWeight: FontWeight.w700, color: ready ? const Color(0xFFAAAAAA) : AppColors.textDark, decoration: ready ? TextDecoration.lineThrough : null), maxLines: 2, overflow: TextOverflow.ellipsis)),
+        ])),
+        SizedBox(width: 40, child: Center(child: Text('${item.qty}', style: TextStyle(fontFamily: 'SpaceMono', fontSize: 15, fontWeight: FontWeight.w700, color: ready ? const Color(0xFFAAAAAA) : AppColors.textDark)))),
+        SizedBox(width: 60, child: Center(child: GestureDetector(
+          onTap: () => _toggleItemStatus(o, item),
+          child: AnimatedContainer(duration: const Duration(milliseconds: 250), padding: const EdgeInsets.all(8), decoration: BoxDecoration(shape: BoxShape.circle, color: ready ? AppColors.statusReady : widget.kitchenColor.withValues(alpha: 0.1)), child: Icon(ready ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, size: 20, color: ready ? Colors.white : widget.kitchenColor.withValues(alpha: 0.5))),
+        ))),
+        // Cancel button - HIDDEN when order is complete
+        if (!orderComplete)
+          SizedBox(width: 44, child: Center(child: GestureDetector(
+            onTap: () => _showCancelDialog(o, item),
+            child: Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: AppColors.statusPending.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.statusPending.withValues(alpha: 0.3))), child: const Icon(Icons.close_rounded, size: 16, color: AppColors.statusPending)),
+          ))),
+        if (orderComplete) const SizedBox(width: 44),
+      ]),
+    );
   }
 
   Widget _buildAllCompleteBanner() => Container(padding: const EdgeInsets.symmetric(vertical: 11), decoration: BoxDecoration(color: AppColors.statusReady.withValues(alpha: 0.08), borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20))), child: const Center(child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.check_circle, size: 18, color: AppColors.statusReady), SizedBox(width: 8), Text('ALL ITEMS COMPLETED', style: TextStyle(fontFamily: 'SpaceMono', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.statusReady, letterSpacing: 1.5))])));
