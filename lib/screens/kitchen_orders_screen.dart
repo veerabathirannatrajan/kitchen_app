@@ -208,13 +208,14 @@ class _KitchenOrdersScreenState extends State<KitchenOrdersScreen> with TickerPr
           onTap: () => _toggleItemStatus(o, item),
           child: AnimatedContainer(duration: const Duration(milliseconds: 250), padding: const EdgeInsets.all(8), decoration: BoxDecoration(shape: BoxShape.circle, color: ready ? AppColors.statusReady : widget.kitchenColor.withValues(alpha: 0.1)), child: Icon(ready ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, size: 20, color: ready ? Colors.white : widget.kitchenColor.withValues(alpha: 0.5))),
         ))),
-        // Cancel button - HIDDEN when order is complete
-        if (!orderComplete)
+        // Cancel button - shows only when item is NOT ready AND order is NOT complete
+        if (!ready && !orderComplete)
           SizedBox(width: 44, child: Center(child: GestureDetector(
             onTap: () => _showCancelDialog(o, item),
             child: Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: AppColors.statusPending.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.statusPending.withValues(alpha: 0.3))), child: const Icon(Icons.close_rounded, size: 16, color: AppColors.statusPending)),
           ))),
-        if (orderComplete) const SizedBox(width: 44),
+        // If item is ready OR order is complete, keep spacing but hide cancel
+        if (ready || orderComplete) const SizedBox(width: 44),
       ]),
     );
   }

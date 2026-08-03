@@ -7,6 +7,7 @@ import '../config/app_colors.dart';
 import '../config/responsive.dart';
 import '../services/api_service.dart';
 import 'kitchen_orders_screen.dart';
+import '../services/auth_service.dart';
 
 class KitchenSelectionScreen extends StatefulWidget {
   const KitchenSelectionScreen({super.key});
@@ -49,7 +50,11 @@ class _KitchenSelectionScreenState extends State<KitchenSelectionScreen>
 
   Future<void> _loadKitchens() async {
     try {
-      final kitchens = await _apiService.getKitchens();
+      // Get the saved username from auth service
+      final username = await AuthService.getSavedUsername();
+      final userCode = username.isNotEmpty ? username : 'club';
+
+      final kitchens = await _apiService.getKitchens(userCode: userCode);
       if (mounted) {
         setState(() { _kitchens = kitchens; _isLoading = false; _errorMessage = null; });
       }

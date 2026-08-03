@@ -9,10 +9,13 @@ class ApiService {
   ApiService._internal();
 
   /// Fetch all active kitchens from API
-  Future<List<Map<String, dynamic>>> getKitchens() async {
+  /// Fetch all active kitchens from API
+  Future<List<Map<String, dynamic>>> getKitchens({String userCode = 'club'}) async {
     try {
-      final response = await http.get(
+      final response = await http.post(
         Uri.parse('${KDSConfig.baseUrl}/KitchenMst'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'UserCode': userCode}),
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200 && response.body.isNotEmpty) {
